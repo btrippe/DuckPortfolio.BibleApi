@@ -8,7 +8,7 @@ Set the YouVersion app key before starting the API:
 
 ```powershell
 $env:YouVersion__AppKey="YOUR_YOUVERSION_APP_KEY"
-dotnet run --project DuckPortfolio.BibleApi
+dotnet run
 ```
 
 Open Swagger:
@@ -74,7 +74,7 @@ az acr build `
   --registry acrduckportfolio15334 `
   --resource-group RubberDuckWebApp_group `
   --image duckportfolio-bible-api:latest `
-  --file DuckPortfolio.BibleApi/Dockerfile .
+  --file Dockerfile .
 ```
 
 Update the running Container App after future builds:

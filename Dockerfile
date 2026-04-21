@@ -1,10 +1,10 @@
 # build
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY DuckPortfolio.BibleApi/DuckPortfolio.BibleApi.csproj DuckPortfolio.BibleApi/
-RUN dotnet restore DuckPortfolio.BibleApi/DuckPortfolio.BibleApi.csproj
-COPY DuckPortfolio.BibleApi/ DuckPortfolio.BibleApi/
-RUN dotnet publish DuckPortfolio.BibleApi/DuckPortfolio.BibleApi.csproj -c Release -o /app/publish
+COPY DuckPortfolio.BibleApi.csproj ./
+RUN dotnet restore DuckPortfolio.BibleApi.csproj
+COPY . ./
+RUN dotnet publish DuckPortfolio.BibleApi.csproj -c Release -o /app/publish
 
 # run
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
