@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using DuckPortfolio.BibleApi.Models;
@@ -136,6 +137,44 @@ public sealed class YouVersionClient
             GetBibleArray(root),
             GetFirstString(root, "next_page_token"),
             GetFirstInt32(root, "total_size"));
+    }
+
+    public async Task<VerseOfTheDayResponse> GetVerseOfTheDayAsync(
+        int day,
+        CancellationToken cancellationToken)
+    {
+        EnsureConfigured();
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/v1/verse_of_the_days/{day}");
+
+        request.Headers.Add("X-YVP-App-Key", _options.AppKey);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new YouVersionApiException(
+                response.StatusCode,
+                $"YouVersion returned {(int)response.StatusCode}: {responseBody}");
+        }
+
+        using var document = JsonDocument.Parse(responseBody);
+        var root = document.RootElement.Clone();
+        var passageId = GetFirstString(root, "passage_id");
+
+        if (string.IsNullOrWhiteSpace(passageId))
+        {
+            throw new YouVersionApiException(
+                HttpStatusCode.BadGateway,
+                "YouVersion response did not include passage_id.");
+        }
+
+        return new VerseOfTheDayResponse(
+            GetFirstInt32(root, "day") ?? day,
+            passageId);
     }
 
     private static string BuildPassageUri(

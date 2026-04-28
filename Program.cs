@@ -236,6 +236,103 @@ app.MapGet("/api/bibles/recommended", () => Results.Ok(new RecommendedBibleRespo
 .WithDescription("Returns a stable set of recommended English Bible versions for default app or Unity dropdowns.")
 .Produces<IReadOnlyList<RecommendedBibleResponse>>(StatusCodes.Status200OK);
 
+app.MapGet("/api/verse-of-the-days/{day:int}", async (
+    int day,
+    YouVersionClient youVersionClient,
+    CancellationToken cancellationToken) =>
+{
+    if (day is < 1 or > 366)
+    {
+        return Results.BadRequest(new ErrorResponse("day must be between 1 and 366."));
+    }
+
+    try
+    {
+        var verseOfTheDay = await youVersionClient.GetVerseOfTheDayAsync(day, cancellationToken);
+        return Results.Ok(verseOfTheDay);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(
+            title: "YouVersion configuration is missing.",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (YouVersionApiException ex)
+    {
+        return Results.Problem(
+            title: "YouVersion request failed.",
+            detail: ex.Message,
+            statusCode: (int)ex.StatusCode);
+    }
+})
+.WithName("GetVerseOfTheDay")
+.WithTags("Verse Of The Day")
+.WithSummary("Gets the verse of the day for a specific day of the year.")
+.WithDescription("Returns the YouVersion verse of the day passage identifier for day 1 through 366.")
+.Produces<VerseOfTheDayResponse>(StatusCodes.Status200OK)
+.Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+.ProducesProblem(StatusCodes.Status500InternalServerError);
+
+app.MapGet("/api/bibles/{bibleId:int}/passages/{passageId}", async (
+    int bibleId,
+    string passageId,
+    string? format,
+    bool? include_headings,
+    bool? include_notes,
+    YouVersionClient youVersionClient,
+    CancellationToken cancellationToken) =>
+{
+    if (bibleId <= 0)
+    {
+        return Results.BadRequest(new ErrorResponse("bibleId must be greater than zero."));
+    }
+
+    if (string.IsNullOrWhiteSpace(passageId))
+    {
+        return Results.BadRequest(new ErrorResponse("passageId is required."));
+    }
+
+    if (!TryParseContentFormat(format, out var contentFormat))
+    {
+        return Results.BadRequest(new ErrorResponse("format must be text or html."));
+    }
+
+    try
+    {
+        var passage = await youVersionClient.GetPassageAsync(
+            bibleId,
+            passageId,
+            contentFormat,
+            include_headings,
+            include_notes,
+            cancellationToken);
+
+        return Results.Ok(passage);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(
+            title: "YouVersion configuration is missing.",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (YouVersionApiException ex)
+    {
+        return Results.Problem(
+            title: "YouVersion request failed.",
+            detail: ex.Message,
+            statusCode: (int)ex.StatusCode);
+    }
+})
+.WithName("GetBiblePassage")
+.WithTags("Passages")
+.WithSummary("Gets a Bible passage by Bible ID and passage ID.")
+.WithDescription("Returns a normalized passage response. Query parameters mirror YouVersion: format=text|html, include_headings, and include_notes.")
+.Produces<BiblePassageResponse>(StatusCodes.Status200OK)
+.Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+.ProducesProblem(StatusCodes.Status500InternalServerError);
+
 app.MapGet("/api/bibles/{bibleId:int}", async (
     int bibleId,
     YouVersionClient youVersionClient,
@@ -290,4 +387,28 @@ static bool IsValidPageSize(string? pageSize, string[]? fields)
 
     return int.TryParse(pageSize, out var numericPageSize)
         && numericPageSize is >= 1 and <= 100;
+}
+
+static bool TryParseContentFormat(string? format, out BibleContentFormat? contentFormat)
+{
+    contentFormat = null;
+
+    if (string.IsNullOrWhiteSpace(format))
+    {
+        return true;
+    }
+
+    if (string.Equals(format, "text", StringComparison.OrdinalIgnoreCase))
+    {
+        contentFormat = BibleContentFormat.Text;
+        return true;
+    }
+
+    if (string.Equals(format, "html", StringComparison.OrdinalIgnoreCase))
+    {
+        contentFormat = BibleContentFormat.Html;
+        return true;
+    }
+
+    return false;
 }

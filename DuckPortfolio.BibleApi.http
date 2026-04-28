@@ -39,3 +39,13 @@ Accept: application/json
 
 GET {{baseUrl}}/api/bibles/recommended
 Accept: application/json
+
+###
+
+GET {{baseUrl}}/api/verse-of-the-days/1
+Accept: application/json
+
+###
+
+GET {{baseUrl}}/api/bibles/{{bibleId}}/passages/{{reference}}?format=text&include_headings=false&include_notes=false
+Accept: application/json

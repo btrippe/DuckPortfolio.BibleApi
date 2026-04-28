@@ -43,6 +43,18 @@ Curated starter translation list:
 GET /api/bibles/recommended
 ```
 
+Verse of the day passage identifier:
+
+```http
+GET /api/verse-of-the-days/1
+```
+
+Path-based passage lookup:
+
+```http
+GET /api/bibles/3034/passages/JHN.3.16?format=text&include_headings=false&include_notes=false
+```
+
 John 3:16:
 
 ```http
